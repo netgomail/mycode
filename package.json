@@ -1,6 +1,6 @@
 {
   "name": "mycode",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "main": "src/app.jsx",
   "dependencies": {
     "ink": "6.8.0",
