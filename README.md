@@ -4,62 +4,52 @@
 
 ---
 
-## Запуск
-
-### Скомпилированный бинарник (Windows)
-
-```cmd
-dist\mycode.exe
-```
-
-> Бинарник самодостаточный — Node.js устанавливать не нужно.
-
-### Из исходников (нужен Bun или Node.js)
-
-```bash
-# Через Bun (рекомендуется)
-bun src/app.jsx
-
-# Через Node.js
-npm install
-node src/app.jsx   # или: npx tsx src/app.jsx
-```
-
----
-
 ## Установка
 
 ### Linux / macOS
 
 ```bash
-curl -fsSL https://yourhost/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/netgomail/mycode/master/install.sh | bash
 ```
 
 ### Windows (PowerShell)
 
 ```powershell
-irm https://yourhost/install.ps1 | iex
+irm https://raw.githubusercontent.com/netgomail/mycode/master/install.ps1 | iex
+```
+
+Установщики автоматически скачивают последнюю версию из GitHub Releases и добавляют `mycode` в PATH.
+
+---
+
+## Обновление
+
+```bash
+mycode update
+```
+
+---
+
+## Запуск из исходников
+
+Требуется [Bun](https://bun.sh) ≥ 1.1.
+
+```bash
+bun install
+bun start
 ```
 
 ---
 
 ## Сборка бинарников
 
-Требуется [Bun](https://bun.sh) ≥ 1.1.
-
 ```bash
-# Windows (использует bunbuild.mjs с плагинами)
-bun run build:win    # → dist/mycode.exe
-
-# Linux x64
-bun run build:linux  # → dist/mycode
-
-# macOS x64
-bun run build:mac    # → dist/mycode-mac
+bun run build:win    # → dist/mycode.exe        (Windows x64)
+bun run build:linux  # → dist/mycode-linux      (Linux x64)
+bun run build:mac    # → dist/mycode-mac-x64    (macOS x64)
+#                      dist/mycode-mac-arm      (macOS ARM64)
+bun run build:all    # все платформы
 ```
-
-> **Почему Bun, а не pkg?**
-> `pkg` не поддерживает ESM и WebAssembly. Bun корректно компилирует ink + yoga-wasm-web в единый standalone-бинарник.
 
 ---
 
@@ -74,7 +64,7 @@ bun run build:mac    # → dist/mycode-mac
 | `/run <команда>` | Выполнить команду (заглушка) |
 | `/config` | Настройки приложения (заглушка) |
 | `/version` | Версия приложения |
-| `/clear` | Очистить экран |
+| `/clear` | Очистить историю |
 | `/exit` / `/quit` | Завершить работу |
 
 Любой текст без `/` — запрос к AI (спиннер + stub-ответ).
@@ -87,12 +77,11 @@ bun run build:mac    # → dist/mycode-mac
 mycode/
 ├── src/
 │   └── app.jsx          — исходник (React + Ink)
-├── dist/
-│   └── mycode.exe       — скомпилированный бинарник Windows (~110 МБ)
-├── bunbuild.mjs         — скрипт сборки с Bun-плагинами
+├── dist/                — скомпилированные бинарники (не в git)
+├── bunbuild.mjs         — скрипт сборки
 ├── install.sh           — установщик Linux/macOS
 ├── install.ps1          — установщик Windows
-└── package.json
+└── package.json         — версия (единственный источник)
 ```
 
 ---
@@ -101,9 +90,8 @@ mycode/
 
 | Технология | Роль |
 |---|---|
-| [React](https://react.dev) 18 | Компонентный UI |
-| [Ink](https://github.com/vadimdemedes/ink) 4 | Рендеринг React в терминале |
-| [yoga-wasm-web](https://github.com/nicolo-ribaudo/yoga-wasm-web) | Flexbox-движок для Ink (WASM) |
+| [React](https://react.dev) 19 | Компонентный UI |
+| [Ink](https://github.com/vadimdemedes/ink) 6 | Рендеринг React в терминале |
 | [Bun](https://bun.sh) | Runtime + компилятор в бинарник |
 
 ---
