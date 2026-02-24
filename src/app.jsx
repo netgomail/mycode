@@ -8,6 +8,13 @@ import { version as VERSION } from '../package.json';
 const REPO = 'netgomail/mycode';
 let _msgId = 0;
 
+// Sorted list of all slash-commands (used for autocomplete)
+const COMMANDS = [
+  '/clear', '/config', '/exit', '/files',
+  '/help',  '/model',  '/quit', '/run',
+  '/status', '/version',
+];
+
 // ─── Self-update ──────────────────────────────────────────────────────────────
 function getPlatformBinary() {
   if (process.platform === 'win32') return 'mycode.exe';
@@ -28,14 +35,10 @@ async function selfUpdate(onProgress = () => {}) {
   }
 
   const latest = release.tag_name.replace(/^v/, '');
-  if (latest === VERSION) {
-    return `Уже установлена последняя версия v${VERSION}`;
-  }
+  if (latest === VERSION) return `Уже установлена последняя версия v${VERSION}`;
 
   onProgress(`Скачиваю v${latest}...`);
-  const binaryName = getPlatformBinary();
-  const url = `https://github.com/${REPO}/releases/download/v${latest}/${binaryName}`;
-
+  const url = `https://github.com/${REPO}/releases/download/v${latest}/${getPlatformBinary()}`;
   let data;
   try {
     const resp = await fetch(url);
@@ -45,33 +48,25 @@ async function selfUpdate(onProgress = () => {}) {
     return 'Ошибка при скачивании: ' + e.message;
   }
 
-  // Detect compiled binary vs dev mode (bun src/app.jsx)
   const exePath = process.execPath;
-  const exeName = basename(exePath).toLowerCase();
-  if (exeName.startsWith('bun')) {
-    return 'Обновление доступно: v' + VERSION + ' → v' + latest + '\nЗапустите установщик чтобы обновить: install.sh / install.ps1';
-  }
+  if (basename(exePath).toLowerCase().startsWith('bun'))
+    return `Обновление доступно: v${VERSION} → v${latest}\nЗапустите install.sh / install.ps1 чтобы обновить.`;
 
   try {
     if (process.platform === 'win32') {
-      // Cannot overwrite a running .exe — download as .new, schedule swap
       const newPath = exePath + '.new';
       await Bun.write(newPath, data);
       const { spawn } = await import('child_process');
-      const ps = `Start-Sleep -Seconds 1; Move-Item -Force '${newPath}' '${exePath}'`;
-      spawn('powershell.exe', ['-WindowStyle', 'Hidden', '-Command', ps], {
-        detached: true, stdio: 'ignore',
-      }).unref();
-      return [
-        `Обновление скачано: v${VERSION} → v${latest}`,
-        'Замена выполнится после выхода. Перезапустите mycode.',
-      ].join('\n');
-    } else {
-      const { writeFileSync, chmodSync } = await import('fs');
-      writeFileSync(exePath, data);
-      chmodSync(exePath, 0o755);
-      return `Обновлено до v${latest}. Перезапустите mycode.`;
+      spawn('powershell.exe',
+        ['-WindowStyle', 'Hidden', '-Command',
+         `Start-Sleep 1; Move-Item -Force '${newPath}' '${exePath}'`],
+        { detached: true, stdio: 'ignore' }).unref();
+      return `Обновление скачано: v${VERSION} → v${latest}\nЗамена выполнится после выхода. Перезапустите mycode.`;
     }
+    const { writeFileSync, chmodSync } = await import('fs');
+    writeFileSync(exePath, data);
+    chmodSync(exePath, 0o755);
+    return `Обновлено до v${latest}. Перезапустите mycode.`;
   } catch (e) {
     return 'Ошибка при установке: ' + e.message;
   }
@@ -105,7 +100,6 @@ function Header() {
   const cwd = process.cwd();
   const home = homedir();
   const dir = (cwd.startsWith(home) ? '~' + cwd.slice(home.length) : cwd).replace(/\\/g, '/');
-
   return (
     <Box flexDirection="column" marginBottom={1}>
       <Box borderStyle="round" borderColor="cyan" paddingX={1} width={width}>
@@ -191,10 +185,31 @@ function Thinking() {
   );
 }
 
+// ─── Autocomplete suggestions ─────────────────────────────────────────────────
+function Suggestions({ items, selectedIdx, typed }) {
+  if (items.length === 0) return null;
+  return (
+    <Box flexDirection="column" paddingLeft={3} marginBottom={0}>
+      {items.map((cmd, i) => {
+        const isSelected = i === selectedIdx;
+        const rest = cmd.slice(typed.length);
+        return (
+          <Box key={cmd}>
+            <Text color={isSelected ? 'cyan' : 'gray'}>{isSelected ? '❯ ' : '  '}</Text>
+            <Text color={isSelected ? 'white' : 'gray'} bold={isSelected}>{typed}</Text>
+            <Text color={isSelected ? 'cyan'  : 'gray'}>{rest}</Text>
+          </Box>
+        );
+      })}
+    </Box>
+  );
+}
+
 // ─── Input box ────────────────────────────────────────────────────────────────
-function InputBox({ value, isThinking }) {
+function InputBox({ value, isThinking, suggestions, sugIdx }) {
   const { stdout } = useStdout();
   const width = stdout?.columns ?? 80;
+  const hasSugs = suggestions.length > 0;
 
   return (
     <Box flexDirection="column" marginTop={1}>
@@ -220,9 +235,14 @@ function InputBox({ value, isThinking }) {
           )}
         </Box>
       </Box>
+
+      {hasSugs && <Suggestions items={suggestions} selectedIdx={sugIdx} typed={value} />}
+
       <Box paddingLeft={2}>
         <Text color="gray" dimColor>
-          {'Enter отправить  ·  Ctrl+C выход  ·  /help команды'}
+          {hasSugs
+            ? 'Tab/Enter выбрать  ·  ↑↓ навигация  ·  Esc закрыть'
+            : 'Enter отправить  ·  ↑↓ история  ·  Ctrl+C выход  ·  /help команды'}
         </Text>
       </Box>
     </Box>
@@ -239,11 +259,9 @@ function useCommands(dispatch, exit) {
       case '/quit':
         exit();
         break;
-
       case '/clear':
         dispatch({ type: 'clear' });
         break;
-
       case '/help':
         add('system', [
           'Доступные команды:',
@@ -254,17 +272,14 @@ function useCommands(dispatch, exit) {
           '  /model           информация о модели',
           '  /status          статус сессии',
           '  /files [путь]    файлы в директории',
-
           '  /run <команда>   выполнить команду (заглушка)',
           '  /config          настройки (заглушка)',
           '  /exit            завершить работу',
         ].join('\n'));
         break;
-
       case '/version':
         add('system', 'МойКод v' + VERSION);
         break;
-
       case '/model':
         add('system', [
           'Модель:     mycode-stub-1',
@@ -273,7 +288,6 @@ function useCommands(dispatch, exit) {
           'Статус:     ● онлайн',
         ].join('\n'));
         break;
-
       case '/status': {
         const up = process.uptime();
         const m = Math.floor(up / 60), s = Math.floor(up % 60);
@@ -286,7 +300,6 @@ function useCommands(dispatch, exit) {
         ].join('\n'));
         break;
       }
-
       case '/files': {
         const target = arg || process.cwd();
         try {
@@ -305,7 +318,8 @@ function useCommands(dispatch, exit) {
           add('system', [
             target.replace(/\\/g, '/'), '',
             ...dirs.sort().map(d => '  📁  ' + d + '/'),
-            ...files.sort((a, b) => a.name.localeCompare(b.name)).map(f => '  📄  ' + f.name + '  ' + fmt(f.size)),
+            ...files.sort((a, b) => a.name.localeCompare(b.name))
+                    .map(f => '  📄  ' + f.name + '  ' + fmt(f.size)),
             '', '  ' + dirs.length + ' папок, ' + files.length + ' файлов',
           ].join('\n'));
         } catch {
@@ -313,11 +327,9 @@ function useCommands(dispatch, exit) {
         }
         break;
       }
-
       case '/run':
-        add('system', '[заглушка] В реальной версии выполнилась бы: ' + (arg || '(пусто)'));
+        add('system', '[заглушка] Выполнилась бы: ' + (arg || '(пусто)'));
         break;
-
       case '/config':
         add('system', [
           'Настройки (заглушка):',
@@ -327,7 +339,6 @@ function useCommands(dispatch, exit) {
           '  Телеметрия:      выключена',
         ].join('\n'));
         break;
-
       default:
         add('error', 'Неизвестная команда: ' + cmd + '  (введите /help)');
     }
@@ -345,29 +356,54 @@ const STUB_RESPONSES = [
 // ─── App ──────────────────────────────────────────────────────────────────────
 function App() {
   const { exit } = useApp();
-  const [input, setInput] = useState('');
+  const [input, setInput]   = useState('');
   const [messages, dispatch] = useReducer(messagesReducer, []);
   const [isPending, startTransition] = useTransition();
 
+  // Command history (↑↓ navigation)
+  const [history,    setHistory]    = useState([]);
+  const [historyIdx, setHistoryIdx] = useState(-1);   // -1 = not in history mode
+  const [savedInput, setSavedInput] = useState('');   // input saved before entering history mode
+
+  // Autocomplete
+  const [suggestions, setSuggestions] = useState([]);
+  const [sugIdx,      setSugIdx]      = useState(0);
+
   const handleCommand = useCommands(dispatch, exit);
+
+  // Recompute suggestions whenever input changes
+  useEffect(() => {
+    if (input.startsWith('/') && !input.includes(' ')) {
+      const q = input.toLowerCase();
+      const filtered = COMMANDS.filter(c => c.startsWith(q) && c !== q);
+      setSuggestions(filtered);
+      setSugIdx(0);
+    } else {
+      setSuggestions([]);
+    }
+  }, [input]);
 
   const handleSubmit = useCallback((text) => {
     const t = text.trim();
     if (!t || isPending) return;
 
+    // Append to history (skip consecutive duplicates)
+    setHistory(h => h.length && h[h.length - 1] === t ? h : [...h, t]);
+    setHistoryIdx(-1);
+    setSavedInput('');
+    setSuggestions([]);
+    setSugIdx(0);
+
     if (t.startsWith('/')) {
       const sp = t.indexOf(' ');
-      const cmd = sp === -1 ? t : t.slice(0, sp);
-      const arg = sp === -1 ? '' : t.slice(sp + 1).trim();
-
-      handleCommand(cmd.toLowerCase(), arg);
+      handleCommand(
+        sp === -1 ? t           : t.slice(0, sp),
+        sp === -1 ? ''          : t.slice(sp + 1).trim(),
+      );
       return;
     }
 
     dispatch({ type: 'add', role: 'user', content: t });
-
-    // React 19: startTransition accepts async functions;
-    // isPending stays true until the async function resolves
     startTransition(async () => {
       await new Promise(r => setTimeout(r, 1200 + Math.random() * 800));
       const fn = STUB_RESPONSES[Math.floor(Math.random() * STUB_RESPONSES.length)];
@@ -375,12 +411,84 @@ function App() {
     });
   }, [isPending, dispatch, handleCommand]);
 
+  // Inline handler — recreated each render so it always reads fresh state
   useInput((char, key) => {
     if (key.ctrl && char === 'c') { exit(); return; }
-    if (key.return) { handleSubmit(input); setInput(''); return; }
-    if (key.backspace || key.delete) { setInput(s => s.slice(0, -1)); return; }
+
+    const hasSugs = suggestions.length > 0;
+
+    // ── Arrow Up ──────────────────────────────────────────────────────────────
+    if (key.upArrow) {
+      if (hasSugs) {
+        setSugIdx(i => Math.max(0, i - 1));
+      } else if (history.length > 0) {
+        if (historyIdx === -1) {
+          setSavedInput(input);
+          const idx = history.length - 1;
+          setHistoryIdx(idx);
+          setInput(history[idx]);
+        } else if (historyIdx > 0) {
+          const idx = historyIdx - 1;
+          setHistoryIdx(idx);
+          setInput(history[idx]);
+        }
+      }
+      return;
+    }
+
+    // ── Arrow Down ────────────────────────────────────────────────────────────
+    if (key.downArrow) {
+      if (hasSugs) {
+        setSugIdx(i => Math.min(suggestions.length - 1, i + 1));
+      } else if (historyIdx !== -1) {
+        if (historyIdx < history.length - 1) {
+          const idx = historyIdx + 1;
+          setHistoryIdx(idx);
+          setInput(history[idx]);
+        } else {
+          setHistoryIdx(-1);
+          setInput(savedInput);
+        }
+      }
+      return;
+    }
+
+    // ── Tab — fill suggestion without executing ───────────────────────────────
+    if (key.tab) {
+      if (hasSugs) setInput(suggestions[sugIdx]);
+      return;
+    }
+
+    // ── Escape — close suggestions or exit history mode ───────────────────────
+    if (key.escape) {
+      if (hasSugs) {
+        setSuggestions([]);
+      } else if (historyIdx !== -1) {
+        setHistoryIdx(-1);
+        setInput(savedInput);
+      }
+      return;
+    }
+
+    // ── Enter — execute suggestion (if visible) or current input ─────────────
+    if (key.return) {
+      const text = hasSugs ? suggestions[sugIdx] : input;
+      handleSubmit(text);
+      setInput('');
+      return;
+    }
+
+    // ── Backspace / Delete ────────────────────────────────────────────────────
+    if (key.backspace || key.delete) {
+      setInput(s => s.slice(0, -1));
+      if (historyIdx !== -1) setHistoryIdx(-1); // start editing → leave history mode
+      return;
+    }
+
+    // ── Regular character ─────────────────────────────────────────────────────
     if (!key.ctrl && !key.meta && !key.escape && char) {
       setInput(s => s + char);
+      if (historyIdx !== -1) setHistoryIdx(-1);
     }
   });
 
@@ -395,7 +503,12 @@ function App() {
         return                               <SystemMessage    key={msg.id} content={msg.content} />;
       })}
       {isPending && <Thinking />}
-      <InputBox value={input} isThinking={isPending} />
+      <InputBox
+        value={input}
+        isThinking={isPending}
+        suggestions={suggestions}
+        sugIdx={sugIdx}
+      />
     </Box>
   );
 }
