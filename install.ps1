@@ -3,10 +3,19 @@
 $ErrorActionPreference = "Stop"
 
 $REPO        = "netgomail/mycode"
-$VERSION     = "0.2.0"
 $APP         = "mycode"
 $INSTALL_DIR = "$env:USERPROFILE\.local\bin"
 $BINARY_NAME = "mycode.exe"
+
+# Получаем последнюю версию из GitHub API
+Write-Host "  Fetching latest version..." -ForegroundColor DarkGray
+try {
+    $release = Invoke-RestMethod "https://api.github.com/repos/$REPO/releases/latest"
+    $VERSION = $release.tag_name -replace '^v', ''
+} catch {
+    Write-Host "  X " -NoNewline -ForegroundColor Red
+    Write-Host "Failed to fetch version: $_"; exit 1
+}
 $DOWNLOAD_URL = "https://github.com/$REPO/releases/download/v$VERSION/$BINARY_NAME"
 
 function Write-Step { param($msg) Write-Host "  > " -NoNewline -ForegroundColor Cyan;   Write-Host $msg }

@@ -3,9 +3,9 @@ import { render, Box, Text, useInput, useApp, useStdout } from 'ink';
 import { readdirSync, statSync } from 'fs';
 import { join, basename } from 'path';
 import { homedir } from 'os';
+import { version as VERSION } from '../package.json';
 
-const VERSION = '0.2.0';
-const REPO    = 'netgomail/mycode';
+const REPO = 'netgomail/mycode';
 let _msgId = 0;
 
 // ─── Self-update ──────────────────────────────────────────────────────────────
