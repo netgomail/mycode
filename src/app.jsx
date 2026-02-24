@@ -1,11 +1,81 @@
 import React, { useState, useReducer, useEffect, useCallback, useTransition } from 'react';
 import { render, Box, Text, useInput, useApp, useStdout } from 'ink';
 import { readdirSync, statSync } from 'fs';
-import { join } from 'path';
+import { join, basename } from 'path';
 import { homedir } from 'os';
 
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
+const REPO    = 'netgomail/mycode';
 let _msgId = 0;
+
+// ─── Self-update ──────────────────────────────────────────────────────────────
+function getPlatformBinary() {
+  if (process.platform === 'win32') return 'mycode.exe';
+  if (process.platform === 'darwin')
+    return process.arch === 'arm64' ? 'mycode-mac-arm' : 'mycode-mac-x64';
+  return 'mycode-linux';
+}
+
+async function selfUpdate(onProgress = () => {}) {
+  onProgress('Проверяю обновления...');
+  let release;
+  try {
+    const resp = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`);
+    if (!resp.ok) throw new Error('GitHub API: HTTP ' + resp.status);
+    release = await resp.json();
+  } catch (e) {
+    return 'Ошибка при проверке обновлений: ' + e.message;
+  }
+
+  const latest = release.tag_name.replace(/^v/, '');
+  if (latest === VERSION) {
+    return `Уже установлена последняя версия v${VERSION}`;
+  }
+
+  onProgress(`Скачиваю v${latest}...`);
+  const binaryName = getPlatformBinary();
+  const url = `https://github.com/${REPO}/releases/download/v${latest}/${binaryName}`;
+
+  let data;
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    data = new Uint8Array(await resp.arrayBuffer());
+  } catch (e) {
+    return 'Ошибка при скачивании: ' + e.message;
+  }
+
+  // Detect compiled binary vs dev mode (bun src/app.jsx)
+  const exePath = process.execPath;
+  const exeName = basename(exePath).toLowerCase();
+  if (exeName.startsWith('bun')) {
+    return 'Обновление доступно: v' + VERSION + ' → v' + latest + '\nЗапустите установщик чтобы обновить: install.sh / install.ps1';
+  }
+
+  try {
+    if (process.platform === 'win32') {
+      // Cannot overwrite a running .exe — download as .new, schedule swap
+      const newPath = exePath + '.new';
+      await Bun.write(newPath, data);
+      const { spawn } = await import('child_process');
+      const ps = `Start-Sleep -Seconds 1; Move-Item -Force '${newPath}' '${exePath}'`;
+      spawn('powershell.exe', ['-WindowStyle', 'Hidden', '-Command', ps], {
+        detached: true, stdio: 'ignore',
+      }).unref();
+      return [
+        `Обновление скачано: v${VERSION} → v${latest}`,
+        'Замена выполнится после выхода. Перезапустите mycode.',
+      ].join('\n');
+    } else {
+      const { writeFileSync, chmodSync } = await import('fs');
+      writeFileSync(exePath, data);
+      chmodSync(exePath, 0o755);
+      return `Обновлено до v${latest}. Перезапустите mycode.`;
+    }
+  } catch (e) {
+    return 'Ошибка при установке: ' + e.message;
+  }
+}
 
 // ─── Messages reducer ─────────────────────────────────────────────────────────
 function messagesReducer(state, action) {
@@ -184,6 +254,7 @@ function useCommands(dispatch, exit) {
           '  /model           информация о модели',
           '  /status          статус сессии',
           '  /files [путь]    файлы в директории',
+
           '  /run <команда>   выполнить команду (заглушка)',
           '  /config          настройки (заглушка)',
           '  /exit            завершить работу',
@@ -288,13 +359,14 @@ function App() {
       const sp = t.indexOf(' ');
       const cmd = sp === -1 ? t : t.slice(0, sp);
       const arg = sp === -1 ? '' : t.slice(sp + 1).trim();
+
       handleCommand(cmd.toLowerCase(), arg);
       return;
     }
 
     dispatch({ type: 'add', role: 'user', content: t });
 
-    // React 19: startTransition accepts async functions
+    // React 19: startTransition accepts async functions;
     // isPending stays true until the async function resolves
     startTransition(async () => {
       await new Promise(r => setTimeout(r, 1200 + Math.random() * 800));
@@ -328,4 +400,14 @@ function App() {
   );
 }
 
-render(<App />);
+// ─── CLI update mode: `mycode update` ────────────────────────────────────────
+if (process.argv[2] === 'update') {
+  const step = msg => process.stdout.write('  > ' + msg + '\n');
+  process.stdout.write('\n  МойКод — обновление\n\n');
+  const result = await selfUpdate(step);
+  result.split('\n').forEach(l => process.stdout.write('  ' + l + '\n'));
+  process.stdout.write('\n');
+  process.exit(0);
+} else {
+  render(<App />);
+}

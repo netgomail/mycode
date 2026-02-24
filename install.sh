@@ -4,7 +4,7 @@
 set -e
 
 REPO="netgomail/mycode"
-VERSION="0.1.0"
+VERSION="0.2.0"
 INSTALL_DIR="$HOME/.local/bin"
 APP="mycode"
 
