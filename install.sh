@@ -4,7 +4,6 @@
 set -e
 
 REPO="netgomail/mycode"
-VERSION="0.2.0"
 INSTALL_DIR="$HOME/.local/bin"
 APP="mycode"
 
@@ -16,6 +15,12 @@ step()    { echo -e "  ${CYAN}>${NC}  $*"; }
 ok()      { echo -e "  ${GREEN}v${NC}  $*"; }
 warn()    { echo -e "  ${YELLOW}!${NC}  ${GRAY}$*${NC}"; }
 fail()    { echo -e "  ${RED}X${NC}  $*" >&2; exit 1; }
+
+# ── Получаем последнюю версию из GitHub API ───────────────────────────────────
+command -v curl &>/dev/null || fail "curl is required but not installed"
+VERSION=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" \
+  | grep '"tag_name"' | head -1 | sed 's/.*"v\([^"]*\)".*/\1/')
+[ -z "$VERSION" ] && fail "Failed to fetch latest version from GitHub"
 
 echo ""
 echo -e "  ${CYAN}+--------------------------------------------------+${NC}"
@@ -51,9 +56,6 @@ else
 fi
 
 step "Platform: ${PLATFORM} / ${ARCH}"
-
-# ── Проверяем зависимости ────────────────────────────────────────────────────
-command -v curl &>/dev/null || fail "curl is required but not installed"
 
 # ── Создаём папку ────────────────────────────────────────────────────────────
 mkdir -p "$INSTALL_DIR"
