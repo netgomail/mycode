@@ -3,7 +3,7 @@
 $ErrorActionPreference = "Stop"
 
 $REPO        = "netgomail/mycode"
-$VERSION     = "0.1.0"
+$VERSION     = "0.2.0"
 $APP         = "mycode"
 $INSTALL_DIR = "$env:USERPROFILE\.local\bin"
 $BINARY_NAME = "mycode.exe"
