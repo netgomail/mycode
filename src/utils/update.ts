@@ -59,8 +59,12 @@ export async function selfUpdate(onProgress: (msg: string) => void = () => {}): 
         { detached: true, stdio: 'ignore' }).unref();
       return `Обновление скачано: v${VERSION} → v${latest}\nЗамена выполнится после выхода. Перезапустите mycode.`;
     }
-    const { writeFileSync, chmodSync } = await import('fs');
-    writeFileSync(exePath, data);
+    // Linux/macOS: нельзя перезаписать запущенный бинарник (ETXTBSY).
+    // Решение: удаляем старый файл (inode освобождается после завершения процесса),
+    // затем записываем новый файл по тому же пути — это создаёт новый inode.
+    const { unlinkSync, chmodSync } = await import('fs');
+    unlinkSync(exePath);
+    await Bun.write(exePath, data);
     chmodSync(exePath, 0o755);
     return `Обновлено до v${latest}. Перезапустите mycode.`;
   } catch (e) {
