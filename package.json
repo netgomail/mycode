@@ -29,5 +29,8 @@
     "build:linux": "bun run bunbuild.mjs --linux",
     "build:mac": "bun run bunbuild.mjs --mac",
     "build:all": "bun run bunbuild.mjs --all"
+  },
+  "devDependencies": {
+    "bun-types": "^1.3.9"
   }
 }

@@ -1,5 +1,6 @@
 // Заглушка для react-devtools-core (ink импортирует его динамически в dev-режиме,
 // но Bun всё равно пытается его разрешить при сборке)
+/** @type {import('bun').BunPlugin} */
 const devtoolsStubPlugin = {
   name: 'devtools-stub',
   setup(build) {
@@ -34,8 +35,7 @@ async function buildTarget(target, outfile, label) {
   });
 
   if (result.success) {
-    const { readFileSync } = await import('fs');
-    const size = (readFileSync(outfile).length / 1024 / 1024).toFixed(1);
+    const size = (Bun.file(outfile).size / 1024 / 1024).toFixed(1);
     console.log(`  v  ${label.padEnd(14)} -> ${outfile}  (${size} MB)`);
   } else {
     console.error(`  X  ${label} FAILED`);
