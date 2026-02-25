@@ -25,7 +25,7 @@ const TARGETS = {
 
 async function buildTarget(target, outfile, label) {
   const result = await Bun.build({
-    entrypoints: ['./src/app.jsx'],
+    entrypoints: ['./src/app.tsx'],
     compile: { outfile, target },
     define: {
       'process.env.NODE_ENV': '"production"',
