@@ -1,7 +1,7 @@
 {
   "name": "mycode",
-  "version": "0.4.0",
-  "main": "src/app.jsx",
+  "version": "0.5.0",
+  "main": "src/app.tsx",
   "dependencies": {
     "ink": "6.8.0",
     "react": "19.2.0"
@@ -24,13 +24,14 @@
     ]
   },
   "scripts": {
-    "start": "bun src/app.jsx",
+    "start": "bun src/app.tsx",
     "build:win": "bun run bunbuild.mjs",
     "build:linux": "bun run bunbuild.mjs --linux",
     "build:mac": "bun run bunbuild.mjs --mac",
     "build:all": "bun run bunbuild.mjs --all"
   },
   "devDependencies": {
+    "@types/react": "^19.2.14",
     "bun-types": "^1.3.9"
   }
 }
