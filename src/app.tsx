@@ -166,6 +166,21 @@ function App() {
   );
 }
 
+// ─── Применяем отложенное обновление (.new файл на Windows) ──────────────────
+if (process.platform === 'win32') {
+  const { existsSync, renameSync } = await import('fs');
+  const newPath = process.execPath + '.new';
+  if (existsSync(newPath)) {
+    try {
+      renameSync(newPath, process.execPath);
+      process.stdout.write('  Обновление применено. Перезапустите mycode.\n');
+      process.exit(0);
+    } catch {
+      // файл ещё занят — проигнорировать, попробуем в следующий раз
+    }
+  }
+}
+
 // ─── CLI entry ────────────────────────────────────────────────────────────────
 if (process.argv[2] === 'update') {
   const step = (msg: string) => process.stdout.write('  > ' + msg + '\n');
