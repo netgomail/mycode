@@ -22,6 +22,18 @@ function spawn(args: string[]): string {
   } catch { return ''; }
 }
 
+// PowerShell с принудительным UTF-8 — для Windows-команд с кириллицей
+function spawnPS(command: string): string {
+  try {
+    const result = Bun.spawnSync(
+      ['powershell.exe', '-NoProfile', '-NonInteractive', '-Command',
+       `[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; ${command}`],
+      { stdout: 'pipe', stderr: 'pipe' },
+    );
+    return new TextDecoder('utf-8').decode(result.stdout).trim();
+  } catch { return ''; }
+}
+
 function fmtBytes(n: number): string {
   if (n >= 1073741824) return (n / 1073741824).toFixed(1) + ' ГБ';
   if (n >= 1048576)    return (n / 1048576).toFixed(1)    + ' МБ';
@@ -80,26 +92,14 @@ function sectionDisks(): InventorySection {
     const out = spawn(['df', '-h', '--output=target,size,used,avail,pcent']);
     if (out) lines = out.split('\n').filter(l => l.trim());
   } else if (isWindows) {
-    const out = spawn(['wmic', 'logicaldisk', 'get', 'Caption,FreeSpace,Size', '/format:list']);
-    if (out) {
-      // Парсим вывод WMIC
-      const entries: Record<string, string> = {};
-      for (const line of out.split('\n')) {
-        const m = line.match(/^(\w+)=(.*)$/);
-        if (m) entries[m[1].trim()] = m[2].trim();
-        if (entries['Caption'] && entries['Size']) {
-          const cap   = entries['Caption'];
-          const total = parseInt(entries['Size']  || '0', 10);
-          const free  = parseInt(entries['FreeSpace'] || '0', 10);
-          if (total > 0) {
-            lines.push(`${cap}  всего ${fmtBytes(total)}  свободно ${fmtBytes(free)}  (${Math.round((total - free) / total * 100)}%)`);
-          }
-          delete entries['Caption'];
-          delete entries['Size'];
-          delete entries['FreeSpace'];
-        }
-      }
-    }
+    const out = spawnPS(
+      'Get-PSDrive -PSProvider FileSystem | ' +
+      'Where-Object { $_.Used -ne $null } | ' +
+      'ForEach-Object { $total = $_.Used + $_.Free; "{0}:  всего {1}  свободно {2}  ({3}%)" -f ' +
+      '$_.Name, [math]::Round($total/1GB,1).ToString()+"ГБ", [math]::Round($_.Free/1GB,1).ToString()+"ГБ", ' +
+      '[math]::Round(($_.Used/$total)*100) }',
+    );
+    if (out) lines.push(...out.split('\n').filter(l => l.trim()));
   }
 
   if (lines.length === 0) lines = ['Нет данных'];
@@ -120,13 +120,11 @@ function sectionUsers(): InventorySection {
       lines.push(...users.length ? users : ['Нет пользователей с UID ≥ 1000']);
     }
   } else if (isWindows) {
-    const out = spawn(['net', 'user']);
-    if (out) {
-      const relevant = out.split('\n')
-        .slice(3)  // пропускаем заголовок
-        .filter(l => l.trim() && !l.startsWith('---') && !l.includes('команда'));
-      lines.push(...relevant.length ? relevant : ['Нет данных']);
-    }
+    const out = spawnPS(
+      'Get-LocalUser | Select-Object Name, Enabled, LastLogon | ' +
+      'ForEach-Object { "{0,-24} enabled={1,-5} lastLogon={2}" -f $_.Name, $_.Enabled, $_.LastLogon }',
+    );
+    if (out) lines.push(...out.split('\n').filter(l => l.trim()));
   }
 
   if (lines.length === 0) lines.push('Нет данных');
