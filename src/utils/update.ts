@@ -43,10 +43,19 @@ export async function selfUpdate(onProgress: (msg: string) => void = () => {}): 
     if (process.platform === 'win32') {
       const newPath = exePath + '.new';
       await Bun.write(newPath, data);
+      const pid = process.pid;
       const { spawn } = await import('child_process');
+      // Ждём завершения текущего процесса по PID, затем заменяем файл с повторными попытками
+      const ps = [
+        `$p = ${pid}`,
+        `while (Get-Process -Id $p -ErrorAction SilentlyContinue) { Start-Sleep 1 }`,
+        `$i = 0`,
+        `while ($i -lt 10) {`,
+        `  try { Move-Item -Force '${newPath}' '${exePath}'; break } catch { Start-Sleep 2; $i++ }`,
+        `}`,
+      ].join('; ');
       spawn('powershell.exe',
-        ['-WindowStyle', 'Hidden', '-Command',
-         `Start-Sleep 1; Move-Item -Force '${newPath}' '${exePath}'`],
+        ['-WindowStyle', 'Hidden', '-Command', ps],
         { detached: true, stdio: 'ignore' }).unref();
       return `Обновление скачано: v${VERSION} → v${latest}\nЗамена выполнится после выхода. Перезапустите mycode.`;
     }
