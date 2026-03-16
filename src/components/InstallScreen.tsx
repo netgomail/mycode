@@ -110,13 +110,13 @@ export function InstallScreen({ onExit }: Props) {
     if (phase === 'loading') return;
 
     if (char === 'q' || key.escape) {
-      if (phase === 'done' || phase === 'error') {
+      if (phase === 'done') {
         setPhase('list');
         setInstallResult(null);
         setInstallSteps([]);
-        setErrorMsg('');
         return;
       }
+      // error или list — выходим в чат
       onExit();
       return;
     }
@@ -198,6 +198,7 @@ export function InstallScreen({ onExit }: Props) {
   }
 
   // ── Фаза: список пакетов ─────────────────────────────────────────────────
+  if (!manifest) return null;
   const selectedEntry = pkgEntries[selected];
   const canInstall = selectedEntry && (statuses.get(selectedEntry[0]) === 'available' || statuses.get(selectedEntry[0]) === 'update');
 
