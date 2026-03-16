@@ -13,7 +13,7 @@ export function Header() {
     <Box flexDirection="column" marginBottom={1}>
       <Box borderStyle="round" borderColor="cyan" paddingX={1} width={width}>
         <Text color="cyan" bold>{'◆  '}</Text>
-        <Text bold>МойКод  </Text>
+        <Text bold>РедОС  </Text>
         <Text color="gray" dimColor>{'v' + VERSION + '  ·  '}</Text>
         <Text color="green">{dir}</Text>
       </Box>

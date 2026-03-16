@@ -1,4 +1,4 @@
-# МойКод
+# РедОС
 
 > Консольная утилита для специалиста по защите информации — аудит безопасности, харденинг и инвентаризация Linux-систем. Заточена под РедОС 7/8 (RHEL-based).
 
@@ -6,26 +6,18 @@
 
 ## Установка
 
-### Linux / macOS
-
 ```bash
-curl -fsSL https://raw.githubusercontent.com/netgomail/mycode/master/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/netgomail/redos/master/install.sh | bash
 ```
 
-### Windows (PowerShell)
-
-```powershell
-irm https://raw.githubusercontent.com/netgomail/mycode/master/install.ps1 | iex
-```
-
-Установщики автоматически скачивают последнюю версию из GitHub Releases и добавляют `mycode` в PATH.
+Установщик автоматически скачивает последнюю версию из GitHub Releases и добавляет `redos` в PATH.
 
 ---
 
 ## Обновление
 
 ```bash
-mycode update
+redos update
 ```
 
 ---
@@ -44,11 +36,10 @@ bun start
 ## Сборка бинарников
 
 ```bash
-bun run build:win    # → dist/mycode.exe        (Windows x64)
-bun run build:linux  # → dist/mycode-linux      (Linux x64)
-bun run build:mac    # → dist/mycode-mac-x64    (macOS x64)
-#                      dist/mycode-mac-arm      (macOS ARM64)
-bun run build:all    # все платформы
+bun run build         # все платформы (Linux + macOS)
+bun run build:linux   # → dist/redos-linux      (Linux x64)
+bun run build:mac     # → dist/redos-mac-x64    (macOS x64)
+#                       dist/redos-mac-arm      (macOS ARM64)
 ```
 
 ---
@@ -155,7 +146,7 @@ bun run build:all    # все платформы
 ## Структура проекта
 
 ```
-mycode/
+redos/
 ├── src/
 │   ├── app.tsx              — точка входа (render + CLI update mode)
 │   ├── types.ts             — общие типы (Screen, Message, TextColor)
@@ -187,7 +178,6 @@ mycode/
 ├── bunbuild.mjs             — скрипт сборки
 ├── tsconfig.json
 ├── install.sh               — установщик Linux/macOS
-├── install.ps1              — установщик Windows
 └── package.json             — версия (единственный источник)
 ```
 

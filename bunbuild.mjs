@@ -17,10 +17,9 @@ const devtoolsStubPlugin = {
 
 // Все поддерживаемые платформы
 const TARGETS = {
-  'bun-windows-x64':  { outfile: 'dist/mycode.exe',     label: 'Windows x64' },
-  'bun-linux-x64':    { outfile: 'dist/mycode-linux',   label: 'Linux x64'   },
-  'bun-darwin-x64':   { outfile: 'dist/mycode-mac-x64', label: 'macOS x64'   },
-  'bun-darwin-arm64': { outfile: 'dist/mycode-mac-arm', label: 'macOS ARM64' },
+  'bun-linux-x64':    { outfile: 'dist/redos-linux',   label: 'Linux x64'   },
+  'bun-darwin-x64':   { outfile: 'dist/redos-mac-x64', label: 'macOS x64'   },
+  'bun-darwin-arm64': { outfile: 'dist/redos-mac-arm', label: 'macOS ARM64' },
 };
 
 async function buildTarget(target, outfile, label) {
@@ -43,21 +42,19 @@ async function buildTarget(target, outfile, label) {
   }
 }
 
-const arg = process.argv[2]; // --all | --linux | --mac | (пусто = Windows)
+const arg = process.argv[2]; // --all | --linux | --mac | (пусто = все)
 
-console.log('\n  Building MyCode...\n');
+console.log('\n  Building РедОС...\n');
 
-if (arg === '--all') {
+if (arg === '--linux') {
+  await buildTarget('bun-linux-x64', 'dist/redos-linux', 'Linux x64');
+} else if (arg === '--mac') {
+  await buildTarget('bun-darwin-x64',   'dist/redos-mac-x64', 'macOS x64');
+  await buildTarget('bun-darwin-arm64', 'dist/redos-mac-arm', 'macOS ARM64');
+} else {
   for (const [target, { outfile, label }] of Object.entries(TARGETS)) {
     await buildTarget(target, outfile, label);
   }
-} else if (arg === '--linux') {
-  await buildTarget('bun-linux-x64', 'dist/mycode-linux', 'Linux x64');
-} else if (arg === '--mac') {
-  await buildTarget('bun-darwin-x64',   'dist/mycode-mac-x64', 'macOS x64');
-  await buildTarget('bun-darwin-arm64', 'dist/mycode-mac-arm', 'macOS ARM64');
-} else {
-  await buildTarget('bun-windows-x64', 'dist/mycode.exe', 'Windows x64');
 }
 
 console.log('\n  Done!\n');

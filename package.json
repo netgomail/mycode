@@ -1,5 +1,5 @@
 {
-  "name": "mycode",
+  "name": "redos",
   "version": "0.6.3",
   "main": "src/app.tsx",
   "dependencies": {
@@ -20,17 +20,15 @@
       "dist/yoga.wasm"
     ],
     "targets": [
-      "node22-win-x64",
       "node22-linux-x64",
       "node22-macos-x64"
     ]
   },
   "scripts": {
     "start": "bun src/app.tsx",
-    "build:win": "bun run bunbuild.mjs",
+    "build": "bun run bunbuild.mjs",
     "build:linux": "bun run bunbuild.mjs --linux",
-    "build:mac": "bun run bunbuild.mjs --mac",
-    "build:all": "bun run bunbuild.mjs --all"
+    "build:mac": "bun run bunbuild.mjs --mac"
   },
   "devDependencies": {
     "@types/react": "^19.2.14",

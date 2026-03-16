@@ -36,7 +36,7 @@ function sudoRun(args: string[]): FixResult {
     const err = new TextDecoder().decode(result.stderr).trim();
     if (result.exitCode === 0) return { ok: true, msg: out || 'Применено' };
     if (err.includes('password is required') || err.includes('a password'))
-      return { ok: false, msg: 'Требуется sudo. Запустите: sudo mycode' };
+      return { ok: false, msg: 'Требуется sudo. Запустите: sudo redos' };
     return { ok: false, msg: err || out || `exit ${result.exitCode}` };
   } catch (e) {
     return { ok: false, msg: (e as Error).message };

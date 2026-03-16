@@ -1,13 +1,12 @@
 import { basename } from 'path';
 import { version as VERSION } from '../../package.json';
 
-const REPO = 'netgomail/mycode';
+const REPO = 'netgomail/redos';
 
 export function getPlatformBinary(): string {
-  if (process.platform === 'win32') return 'mycode.exe';
   if (process.platform === 'darwin')
-    return process.arch === 'arm64' ? 'mycode-mac-arm' : 'mycode-mac-x64';
-  return 'mycode-linux';
+    return process.arch === 'arm64' ? 'redos-mac-arm' : 'redos-mac-x64';
+  return 'redos-linux';
 }
 
 export async function selfUpdate(onProgress: (msg: string) => void = () => {}): Promise<string> {
@@ -37,28 +36,9 @@ export async function selfUpdate(onProgress: (msg: string) => void = () => {}): 
 
   const exePath = process.execPath;
   if (basename(exePath).toLowerCase().startsWith('bun'))
-    return `Обновление доступно: v${VERSION} → v${latest}\nЗапустите install.sh / install.ps1 чтобы обновить.`;
+    return `Обновление доступно: v${VERSION} → v${latest}\nЗапустите install.sh чтобы обновить.`;
 
   try {
-    if (process.platform === 'win32') {
-      const newPath = exePath + '.new';
-      await Bun.write(newPath, data);
-      const pid = process.pid;
-      const { spawn } = await import('child_process');
-      // Ждём завершения текущего процесса по PID, затем заменяем файл с повторными попытками
-      const ps = [
-        `$p = ${pid}`,
-        `while (Get-Process -Id $p -ErrorAction SilentlyContinue) { Start-Sleep 1 }`,
-        `$i = 0`,
-        `while ($i -lt 10) {`,
-        `  try { Move-Item -Force '${newPath}' '${exePath}'; break } catch { Start-Sleep 2; $i++ }`,
-        `}`,
-      ].join('; ');
-      spawn('powershell.exe',
-        ['-WindowStyle', 'Hidden', '-Command', ps],
-        { detached: true, stdio: 'ignore' }).unref();
-      return `Обновление скачано: v${VERSION} → v${latest}\nЗамена выполнится после выхода. Перезапустите mycode.`;
-    }
     // Linux/macOS: нельзя перезаписать запущенный бинарник (ETXTBSY).
     // Решение: пишем во временный файл, затем rename() атомарно заменяет
     // directory entry. Старый inode живёт пока процесс не завершится.
@@ -67,7 +47,7 @@ export async function selfUpdate(onProgress: (msg: string) => void = () => {}): 
     await Bun.write(tmpPath, data);
     chmodSync(tmpPath, 0o755);
     renameSync(tmpPath, exePath);
-    return `Обновлено до v${latest}. Перезапустите mycode.`;
+    return `Обновлено до v${latest}. Перезапустите redos.`;
   } catch (e) {
     return 'Ошибка при установке: ' + (e as Error).message;
   }

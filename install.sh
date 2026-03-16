@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# МойКод — установщик для Linux и macOS
-# Использование: curl -fsSL https://raw.githubusercontent.com/YOURNAME/mycode/main/install.sh | bash
+# redos — установщик для Linux и macOS
+# Использование: curl -fsSL https://raw.githubusercontent.com/YOURNAME/redos/main/install.sh | bash
 set -e
 
-REPO="netgomail/mycode"
+REPO="netgomail/redos"
 INSTALL_DIR="$HOME/.local/bin"
-APP="mycode"
+APP="redos"
 
 # ── Цвета ────────────────────────────────────────────────────────────────────
 CYAN='\033[0;36m'; GREEN='\033[0;32m'; RED='\033[0;31m'
@@ -24,7 +24,7 @@ VERSION=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" \
 
 echo ""
 echo -e "  ${CYAN}+--------------------------------------------------+${NC}"
-echo -e "  ${CYAN}|${NC}  ${BOLD}MyCode${NC} Installer  ${GRAY}v${VERSION}${NC}"
+echo -e "  ${CYAN}|${NC}  ${BOLD}RedOS${NC} Installer  ${GRAY}v${VERSION}${NC}"
 echo -e "  ${CYAN}|${NC}  ${GRAY}https://github.com/${REPO}${NC}"
 echo -e "  ${CYAN}+--------------------------------------------------+${NC}"
 echo ""
@@ -37,7 +37,7 @@ case "$OS" in
   *)       fail "Unsupported OS: $OS" ;;
 esac
 case "$ARCH" in
-  x86_64|amd64) ARCH_SUFFIX="" ;;       # linux -> mycode-linux, mac -> mycode-mac-x64
+  x86_64|amd64) ARCH_SUFFIX="" ;;       # linux -> redos-linux, mac -> redos-mac-x64
   arm64|aarch64)
     if [ "$PLATFORM" = "mac" ]; then
       ARCH_SUFFIX="-arm"
@@ -48,11 +48,11 @@ case "$ARCH" in
 esac
 
 if [ "$PLATFORM" = "linux" ]; then
-  BINARY_NAME="mycode-linux"
+  BINARY_NAME="redos-linux"
 elif [ "$ARCH" = "arm64" ] || [ "$ARCH" = "aarch64" ]; then
-  BINARY_NAME="mycode-mac-arm"
+  BINARY_NAME="redos-mac-arm"
 else
-  BINARY_NAME="mycode-mac-x64"
+  BINARY_NAME="redos-mac-x64"
 fi
 
 step "Platform: ${PLATFORM} / ${ARCH}"
@@ -83,7 +83,7 @@ if ! echo "$PATH" | grep -q "$INSTALL_DIR"; then
 
   if [ -n "$SHELL_RC" ]; then
     echo '' >> "$SHELL_RC"
-    echo '# MyCode' >> "$SHELL_RC"
+    echo '# RedOS' >> "$SHELL_RC"
     echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> "$SHELL_RC"
     ok "Added to PATH in $SHELL_RC"
     warn "Run: source $SHELL_RC  (or restart your terminal)"
